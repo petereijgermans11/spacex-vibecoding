@@ -1,9 +1,28 @@
 // **BELANGRIJK:** Vervang dit met de URL van uw eigen proxy server!
 // Bijvoorbeeld: "http://localhost:3000/proxy?url=" als u de Node.js proxy van het vorige antwoord gebruikt.
-const PROXY_URL_PREFIX = "http://localhost:3000/proxy?url="; // Pas dit aan!
+const PROXY_URL_PREFIX = "http://localhost:3001/proxy?url="; // Pas dit aan!
 const SPACEX_API_BASE_URL = "https://api.spacexdata.com/v4";
 const NUM_UNIQUE_IMAGES = 8; // Aantal unieke afbeeldingen dat we willen gebruiken (voor 16 kaarten)
 const CARD_BACK_IMAGE = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/SpaceX-Logo.svg/1280px-SpaceX-Logo.svg.png'; // Een algemeen SpaceX logo voor de achterkant
+
+
+// Generieke fallback afbeelding voor individuele kaartafbeeldingen
+const GENERIC_IMAGE_FALLBACK = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiM0NDQiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIyIiBmaWxsPSIjY2NjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb29taWUtcmljaD0iYmFzZWxpbmUiPlNQQUNFWCBFUlJPUjwvdGV4dD4KPC9zdmc+'; // Donkerdere, neutrale SVG
+
+// Nieuwe array voor fallback afbeeldingen
+const FALLBACK_IMAGE_URLS = [
+    './assets/spacex1.jpeg', // Of .png, .gif, etc.
+    './assets/spacex2.jpg',
+    './assets/spacex3.jpg',
+    './assets/spacex4.png',
+    './assets/spacex5.jpg',
+    './assets/spacex6.jpeg',
+    './assets/spacex7.jpg',
+    './assets/spacex7.jpeg',
+    './assets/spacex8.jpeg',
+    // Voeg hier meer URL's toe indien nodig om NUM_UNIQUE_IMAGES te dekken
+];
+
 
 let gameBoard = document.getElementById('game-board');
 let movesCounter = document.getElementById('moves-counter');
@@ -40,10 +59,10 @@ async function fetchSpaceXImages() {
         let allImageUrls = [];
 
         launches.forEach(launch => {
-            if (launch.links && launch.links.flickr && launch.links.flickr.original) {
-                allImageUrls.push(...launch.links.flickr.original);
-            } else if (launch.links && launch.links.flickr && launch.links.flickr.small) {
-                allImageUrls.push(...launch.links.flickr.small);
+            if (launch.links && launch.links.patch && launch.links.patch.small) {
+                allImageUrls.push(...launch.links.patch.small);
+            } else if (launch.links && aunch.links.patch && launch.links.patch.large) {
+                allImageUrls.push(...launch.links.patch.large);
             }
         });
 
@@ -52,19 +71,41 @@ async function fetchSpaceXImages() {
                 allImageUrls.push(...rocket.flickr_images);
             }
         });
+        
 
         // Filter duplicaten en ongeldige URL's
         allImageUrls = [...new Set(allImageUrls)].filter(url => url && url.startsWith('http'));
-
         // Kies een willekeurig aantal unieke afbeeldingen
         // Shuffle the array and pick the first NUM_UNIQUE_IMAGES
         shuffleArray(allImageUrls);
-        const selectedUniqueImages = allImageUrls.slice(0, NUM_UNIQUE_IMAGES);
-
+        let selectedUniqueImages = allImageUrls.slice(0, NUM_UNIQUE_IMAGES);
         if (selectedUniqueImages.length < NUM_UNIQUE_IMAGES) {
-            console.warn(`Slechts ${selectedUniqueImages.length} unieke afbeeldingen gevonden, nodig: ${NUM_UNIQUE_IMAGES}. Spel kan kleiner zijn.`);
-        }
+            console.warn(`Slechts ${selectedUniqueImages.length} unieke afbeeldingen opgehaald van de API. Aanvullen met fallback afbeeldingen.`);
+            
+            // Haal het ontbrekende aantal op
+            const needed = NUM_UNIQUE_IMAGES - selectedUniqueImages.length;
+            
+            // Voeg fallback afbeeldingen toe totdat we genoeg hebben of de fallbacks op zijn
+            for (let i = 0; i < needed && i < FALLBACK_IMAGE_URLS.length; i++) {
+                selectedUniqueImages.push(FALLBACK_IMAGE_URLS[i]);
+            }
 
+            // Shuffle opnieuw als we fallbacks hebben toegevoegd om de mix te behouden
+            if (needed > 0) {
+                 shuffleArray(selectedUniqueImages);
+            }
+
+            if (selectedUniqueImages.length < NUM_UNIQUE_IMAGES) {
+                console.error(`Niet genoeg unieke afbeeldingen (API + Fallback) om het spel te vullen. Gevonden: ${selectedUniqueImages.length}, Nodig: ${NUM_UNIQUE_IMAGES}`);
+                // Optioneel: gooi een fout of geef een lege array terug om spelstart te voorkomen
+                // Bij een totale API-fout direct de fallback afbeeldingen gebruiken
+                const finalImages = FALLBACK_IMAGE_URLS.slice(0, NUM_UNIQUE_IMAGES);
+                if (finalImages.length < NUM_UNIQUE_IMAGES) {
+                    console.error(`Niet genoeg fallback afbeeldingen om het spel te vullen. Gevonden: ${finalImages.length}, Nodig: ${NUM_UNIQUE_IMAGES}`);
+                }
+                return finalImages; // Retourneer de fallbacks
+            }
+        }
         return selectedUniqueImages;
 
     } catch (error) {
@@ -137,11 +178,13 @@ function createCards(imageUrls) {
         const frontFace = document.createElement('div');
         frontFace.classList.add('front-face');
         const imgFront = document.createElement('img');
-        imgFront.src = PROXY_URL_PREFIX + encodeURIComponent(url);
+        // imgFront.src = PROXY_URL_PREFIX + encodeURIComponent(url);
+        imgFront.src = url;
         imgFront.alt = "SpaceX Afbeelding";
         imgFront.onerror = () => {
             console.error(`Fout bij het laden van afbeelding via proxy: ${imgFront.src}`);
-            imgFront.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMjAwMCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNlMGUwZTAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIyIiBmaWxsPSIjNzc3IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb29taWUtcmljaD0iYmFzZWxpbmUiPlNQQUNFWCBmYWlsZWQ8L3RleHQ+Cjwvc3ZnPg=='; // Fallback SVG
+            imgFront.src = GENERIC_IMAGE_FALLBACK; // Gebruik de generieke fallback
+            imgFront.alt = "Afbeelding niet geladen"; // Update de alt tekst
         };
         frontFace.appendChild(imgFront);
 

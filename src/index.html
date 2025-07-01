@@ -42,7 +42,7 @@
     <script>
         // **BELANGRIJK:** Vervang dit met de URL van uw eigen proxy server!
         // Bijvoorbeeld: "http://localhost:3000/proxy?url=" als u de Node.js proxy van het vorige antwoord gebruikt.
-        const PROXY_URL_PREFIX = "https://uw-proxy-url.com/?url="; // Pas dit aan naar uw proxy
+        const PROXY_URL_PREFIX = "http://localhost:3000/proxy?url="; // Pas dit aan naar uw proxy
         const SPACEX_API_BASE_URL = "https://api.spacexdata.com/v4";
 
         async function fetchSpaceXImages() {
@@ -95,7 +95,8 @@
                 imageGallery.innerHTML = ''; // Leeg de laadmelding
                 allImageUrls.forEach(originalUrl => {
                     // Gebruik de proxy voor elke afbeeldings-URL
-                    const proxiedUrl = PROXY_URL_PREFIX + encodeURIComponent(originalUrl);
+                    // const proxiedUrl = PROXY_URL_PREFIX + encodeURIComponent(originalUrl);
+                    const proxiedUrl = originalUrl;
 
                     const card = document.createElement('div');
                     card.className = 'image-card';
