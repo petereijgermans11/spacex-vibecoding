@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 // Remove this line: const fetch = require('node-fetch');
 
 const app = express();
