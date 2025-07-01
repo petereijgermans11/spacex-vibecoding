@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceX Memory Spel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #000; /* Ruimte-achtig zwart */
+            color: #00bfff; /* Felblauw voor tekst */
+            overflow: hidden; /* Voorkom scrollbalken */
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgODAwIDYwMCIgcmVsPSJub2Zsb29kIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxyYWRpYWxHcmFkaWVudCBpZD0iZ3JhZDEiIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjUwJSIgZm9jdXNIdWdpZT0icmFkaWFsR3JhZGllbnRDb2xvcjIiPgogICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMDAwMCIgb2Zmc2V0PSIwJSIvPgogICAgPHN0b3Agc3RvcC1jb2xvcj0iIzAwMzM2NiIgb2Zmc2V0PSIxMDAlIi8+CiAgPC9yYWRpYWxHcmFkaWVudD4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyYWQxKSIvPgogIDxjaXJjbGUgY3g9IjEwMCUiIGN5PSIwJSIgcj0iNTAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPgogIDxjaXJjbGUgY3g9IjIwJSIgY3k9IjgwJSIgcj0iMzUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPgogIDxjaXJjbGUgY3g9IjgwJSIgY3k9IjcwJSIgcj0iNDAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPgogIDxjaXJjbGUgY3g9IjQwJSIgY3k9IjIwJSIgcj0iMjUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPgogIDxjaXJjbGUgY3g9IjIwJSIgY3k9IjIwJSIgcj0iMjAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz4KPC9zdmc+'); /* Subtiele achtergrond */
+        }
+
+        h1 {
+            color: #00bfff;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00bfff;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 80%; /* Past bij de breedte van het bord */
+            max-width: 900px; /* Max breedte van het bord */
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #00e5ff;
+        }
+
+        #moves-counter, #timer {
+            background-color: rgba(0, 51, 102, 0.5); /* Donkerder, semi-transparant */
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #00bfff;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 kolommen */
+            grid-gap: 10px; /* Ruimte tussen kaarten */
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparante achtergrond voor het bord */
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5); /* Gloed */
+            width: 80%;
+            max-width: 900px; /* Maximum breedte */
+            aspect-ratio: 1 / 1; /* Maak het bord vierkant als het kan */
+        }
+
+        .memory-card {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1; /* Zorg dat kaarten vierkant zijn */
+            background-color: #333; /* Achterkant van de kaart */
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border: 2px solid #0056b3; /* Rand om de kaart */
+        }
+
+        .memory-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            cursor: default;
+            opacity: 0.7; /* Iets transparanter na match */
+            border-color: #00ff00; /* Groene rand bij match */
+        }
+
+        .front-face, .back-face {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden; /* Verberg achterkant */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            overflow: hidden; /* Zorg dat afbeeldingen binnen de randen blijven */
+        }
+
+        .front-face {
+            background-color: #eee; /* Voorzijde achtergrond */
+            transform: rotateY(180deg); /* Start verborgen */
+        }
+        .front-face img {
+            width: 95%; /* Iets kleiner dan de kaart om padding/rand te simuleren */
+            height: 95%;
+            object-fit: cover; /* Afbeelding vult de ruimte op */
+            border-radius: 4px; /* Rond de hoeken van de afbeelding af */
+        }
+
+        .back-face {
+            background-color: #003366; /* Donkerblauwe achterkant */
+            border: 2px solid #00bfff; /* Helderblauwe rand voor achterkant */
+        }
+        .back-face img {
+             width: 80%; /* Klein SpaceX logo op achterkant */
+             height: 80%;
+             object-fit: contain;
+             filter: drop-shadow(0 0 5px #00bfff); /* Gloed effect */
+        }
+
+        #status-message {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #fff;
+            text-shadow: 0 0 8px #fff;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 5px #00bfff;
+        }
+
+        button:hover {
+            background-color: #007bff;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive design voor kleinere schermen */
+        @media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr); /* 3 kolommen voor kleinere schermen */
+                width: 95%;
+            }
+            h1 { font-size: 1.8em; }
+            .game-info { width: 95%; font-size: 1em; }
+            .memory-card { border-radius: 5px; } /* Minder afgeronde hoeken */
+        }
+
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(2, 1fr); /* 2 kolommen voor zeer kleine schermen */
+                grid-gap: 5px;
+                padding: 5px;
+            }
+            .memory-card { height: 120px; width: 120px; } /* Vaste grootte op kleine schermen */
+            h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <h1>SpaceX Memory Spel</h1>
+
+    <div class="game-info">
+        <div id="moves-counter">Zetten: 0</div>
+        <div id="timer">Tijd: 0s</div>
+    </div>
+
+    <div class="game-board" id="game-board">
+        <p class="loading-message">Laden van SpaceX-afbeeldingen...</p>
+    </div>
+
+    <div id="status-message"></div>
+    <button id="restart-button" style="display: none;">Opnieuw Spelen</button>
+
+    <script src="script.js"></script>
+</body>
+</html>
