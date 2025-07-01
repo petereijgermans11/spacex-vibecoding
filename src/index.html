@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceX Afbeeldingen (Puur JavaScript met Proxy)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f0f0; color: #333; display: flex; flex-direction: column; align-items: center; }
+        .image-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+        .image-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 300px;
+            text-align: center;
+            padding: 10px;
+        }
+        .image-card img {
+            max-width: 100%;
+            height: 200px; /* Vaste hoogte voor consistentie */
+            object-fit: contain; /* Houd aspect ratio, maar pas in het frame */
+            border-radius: 4px;
+            background-color: #eee; /* Achtergrond voor het geval afbeelding niet laadt */
+        }
+        .loading-message { text-align: center; font-style: italic; color: #777; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>SpaceX Afbeeldingen</h1>
+    <div id="image-gallery" class="image-gallery">
+        <p class="loading-message">Laden afbeeldingen...</p>
+    </div>
+
+    <script>
+        // **BELANGRIJK:** Vervang dit met de URL van uw eigen proxy server!
+        // Bijvoorbeeld: "http://localhost:3000/proxy?url=" als u de Node.js proxy van het vorige antwoord gebruikt.
+        const PROXY_URL_PREFIX = "https://uw-proxy-url.com/?url="; // Pas dit aan naar uw proxy
+        const SPACEX_API_BASE_URL = "https://api.spacexdata.com/v4";
+
+        async function fetchSpaceXImages() {
+            const imageGallery = document.getElementById('image-gallery');
+            imageGallery.innerHTML = '<p class="loading-message">Laden afbeeldingen...</p>'; // Reset en toon laadmelding
+
+            let allImageUrls = [];
+
+            try {
+                // 1. Haal afbeeldings-URL's van lanceringen op
+                const launchResponse = await fetch(`${SPACEX_API_BASE_URL}/launches/past?limit=30`);
+                if (!launchResponse.ok) throw new Error(`HTTP error! status: ${launchResponse.status}`);
+                const launches = await launchResponse.json();
+
+                launches.forEach(launch => {
+                    if (launch.links && launch.links.flickr) {
+                        if (launch.links.flickr.original && launch.links.flickr.original.length > 0) {
+                            allImageUrls.push(...launch.links.flickr.original);
+                        } else if (launch.links.flickr.small && launch.links.flickr.small.length > 0) {
+                            allImageUrls.push(...launch.links.flickr.small);
+                        }
+                    }
+                    // Optioneel: YouTube-miniaturen toevoegen
+                    if (launch.links && launch.links.youtube_id) {
+                        const youtubeId = launch.links.youtube_id;
+                        allImageUrls.push(`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`);
+                    }
+                });
+
+                // 2. Haal afbeeldings-URL's van raketten op
+                const rocketResponse = await fetch(`${SPACEX_API_BASE_URL}/rockets`);
+                if (!rocketResponse.ok) throw new Error(`HTTP error! status: ${rocketResponse.status}`);
+                const rockets = await rocketResponse.json();
+
+                rockets.forEach(rocket => {
+                    if (rocket.flickr_images && rocket.flickr_images.length > 0) {
+                        allImageUrls.push(...rocket.flickr_images);
+                    }
+                });
+
+                // Verwijder duplicaten en filter ongeldige URL's
+                allImageUrls = [...new Set(allImageUrls)].filter(url => url && url.startsWith('http'));
+                console.log(`Totaal aantal unieke afbeeldings-URL's gevonden: ${allImageUrls.length}`);
+
+                if (allImageUrls.length === 0) {
+                    imageGallery.innerHTML = '<p class="loading-message">Geen afbeeldingen gevonden.</p>';
+                    return;
+                }
+
+                imageGallery.innerHTML = ''; // Leeg de laadmelding
+                allImageUrls.forEach(originalUrl => {
+                    // Gebruik de proxy voor elke afbeeldings-URL
+                    const proxiedUrl = PROXY_URL_PREFIX + encodeURIComponent(originalUrl);
+
+                    const card = document.createElement('div');
+                    card.className = 'image-card';
+
+                    const img = document.createElement('img');
+                    img.src = proxiedUrl;
+                    img.alt = "SpaceX Afbeelding";
+                    img.onerror = () => {
+                        console.error(`Fout bij het laden van afbeelding via proxy: ${proxiedUrl}. Origineel: ${originalUrl}`);
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNlMGUwZTAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIyIiBmaWxsPSIjNzc3IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb29taWUtcmljaD0iYmFzZWxpbmUiPlNQQUNFWCBmYWlsZWQ8L3RleHQ+Cjwvc3ZnPg=='; // Een eenvoudige fallback SVG
+                        img.alt = "Afbeelding niet geladen";
+                    };
+
+                    const urlText = document.createElement('p');
+                    urlText.textContent = `Bron: ${originalUrl.substring(0, 50)}...`; // Toon een deel van de URL
+                    urlText.style.fontSize = '0.8em';
+                    urlText.style.wordBreak = 'break-all';
+
+                    card.appendChild(img);
+                    // card.appendChild(urlText); // U kunt de URL tonen als u wilt
+                    imageGallery.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error("Fout bij het ophalen of verwerken van SpaceX API-gegevens:", error);
+                imageGallery.innerHTML = '<p class="loading-message" style="color: red;">Fout bij het laden van afbeeldingen. Controleer de console.</p>';
+            }
+        }
+
+        // Roep de functie aan wanneer de pagina geladen is
+        document.addEventListener('DOMContentLoaded', fetchSpaceXImages);
+    </script>
+</body>
+</html>
